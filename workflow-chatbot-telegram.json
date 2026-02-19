@@ -46,7 +46,7 @@
             },
             {
               "name": "appid",
-              "value": "e9e582583090e7088a9824e60bfdc3f7"
+              "value": "[inserir APIKey da OpenWeather]"
             }
           ]
         },
@@ -62,7 +62,7 @@
       "name": "HTTP Request",
       "credentials": {
         "openWeatherMapApi": {
-          "id": "AmvMsiXobH5t2nyu",
+          "id": "[inserir APIKey da OpenWeather]",
           "name": "OpenWeatherMap account"
         }
       },
@@ -157,7 +157,7 @@
             {
               "id": "26fbac3d-8d0e-4e16-8eb9-1f034b6b895d",
               "name": "appid",
-              "value": "e9e582583090e7088a9824e60bfdc3f7",
+              "value": "[inserir APIKey da OpenWeather]",
               "type": "string"
             },
             {
