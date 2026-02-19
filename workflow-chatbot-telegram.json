@@ -1,39 +1,75 @@
 {
-  "name": "Bot de Clima - DrC410",
+  "name": "Chatbot Telegram - Clima",
   "nodes": [
     {
       "parameters": {
         "updates": [
           "message"
-        ],
-        "additionalFields": {}
+        ]
       },
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        288,
-        0
-      ],
-      "id": "ead9ee63-3a43-41aa-abbe-25248244c182",
+      "id": "telegram-trigger-1",
       "name": "Telegram Trigger",
-      "webhookId": "b0bfbd23-774f-4d2c-8d18-a770ad839c9f",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "auto-generated",
       "credentials": {
         "telegramApi": {
-          "id": "UznPjR9oaj3Hbdzh",
-          "name": "bot clima"
+          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
+          "name": "Telegram Bot API"
         }
       }
     },
     {
       "parameters": {
-        "url": "=https://api.openweathermap.org/data/2.5/weather?q={{ $json.queue }}&appid={{ $json.appid }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openWeatherMapApi",
+        "values": {
+          "string": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}"
+            },
+            {
+              "name": "queue_raw",
+              "value": "={{ $json.message.text.trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-initial-2",
+      "name": "Set Initial Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza a entrada do usuário e cria o campo 'queue'\nconst itemsOut = [];\n\nfor (const item of items) {\n  let text = item.json.queue_raw || '';\n\n  // Remove espaços nas extremidades\n  text = text.trim();\n\n  // Normaliza acentuação (remove acentos)\n  text = text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n  // Converte para minúsculas\n  text = text.toLowerCase();\n\n  // Remove espaços duplicados\n  text = text.replace(/\\s+/g, ' ');\n\n  // Remove espaços antes/depois da vírgula\n  text = text.replace(/\\s*,\\s*/g, ',');\n\n  // Codifica para URL (evita problemas com caracteres especiais)\n  text = encodeURIComponent(text);\n  text = decodeURIComponent(text); // Normaliza encoding\n\n  // Separa cidade e UF (se fornecido)\n  const parts = text.split(',');\n  const cidade = parts[0] || '';\n  const uf = parts[1] ? parts[1].trim() : '';\n\n  // Monta o parâmetro 'queue' no formato esperado pela OpenWeather\n  // Formato: \"cidade,BR\" ou apenas \"cidade\"\n  const queue = cidade ? `${cidade},BR` : '';\n\n  item.json.queue = queue;\n  item.json.cidade_input = cidade;\n  item.json.uf_input = uf;\n\n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
+      },
+      "id": "function-normalize-3",
+      "name": "Normalize and Create Queue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.openweathermap.org/data/2.5/weather",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
-              "name": "queue",
+              "name": "q",
               "value": "={{ $json.queue }}"
             },
             {
@@ -46,251 +82,212 @@
             },
             {
               "name": "appid",
-              "value": "[inserir APIKey da OpenWeather]"
+              "value": "={{ $credentials.openWeatherMapApi.apiKey }}"
             }
           ]
         },
         "options": {}
       },
+      "id": "http-openweather-4",
+      "name": "HTTP Request - OpenWeather",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "typeVersion": 4.2,
       "position": [
-        736,
-        0
+        900,
+        300
       ],
-      "id": "66eb156e-95f3-4118-b9ce-bd7165ddc6e0",
-      "name": "HTTP Request",
+      "continueOnFail": true,
       "credentials": {
         "openWeatherMapApi": {
-          "id": "[inserir APIKey da OpenWeather]",
-          "name": "OpenWeatherMap account"
-        }
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "43d43f45-30ab-43d7-acbe-c4a45dd54a67",
-              "name": "mensagem formatada",
-              "value": "=🌤️ A temperatura em {{ $json.name }} é de {{ Math.floor($json.main.temp) }}°C.",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1104,
-        -96
-      ],
-      "id": "31b310bb-3980-4e7c-8760-a540dcaf3fb0",
-      "name": "Edit Fields2"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "84f50cd0-265a-424b-bdd1-b64ae2d675a5",
-              "name": "mensagem erro",
-              "value": "=❌ Cidade não encontrada. Use o formato Cidade, UF do País (ex.: São Paulo,BR).",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1104,
-        128
-      ],
-      "id": "cd03862c-4d68-4ef6-94db-621bc66022b8",
-      "name": "Edit Fields3"
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "={{ $json['mensagem formatada'] }}",
-        "additionalFields": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        1344,
-        -96
-      ],
-      "id": "2bccc6a9-c684-4b76-ba4e-99ab61046cd2",
-      "name": "Send a text message",
-      "webhookId": "566ac0c2-3388-496f-b0dd-abab60414f4a",
-      "credentials": {
-        "telegramApi": {
-          "id": "UznPjR9oaj3Hbdzh",
-          "name": "bot clima"
+          "id": "{{OPENWEATHER_CREDENTIAL_ID}}",
+          "name": "OpenWeather API"
         }
       }
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "id": "15aba94c-96fd-4edb-8af3-2f40060fbdf1",
-              "name": "queue",
-              "value": "={{ $json.message.text }}",
-              "type": "string"
+              "id": "condition-cod",
+              "leftValue": "={{ $json.cod }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
             },
             {
-              "id": "b80d6579-bf70-48e8-9755-addcb167d08f",
-              "name": "expressao_tratada",
-              "value": "={{ $json.message.text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, \"\").replace(/ /g, \"%\") }}",
-              "type": "string"
+              "id": "condition-main",
+              "leftValue": "={{ $json.main }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists"
+              }
             },
             {
-              "id": "26fbac3d-8d0e-4e16-8eb9-1f034b6b895d",
-              "name": "appid",
-              "value": "[inserir APIKey da OpenWeather]",
-              "type": "string"
+              "id": "condition-temp",
+              "leftValue": "={{ $json.main.temp }}",
+              "rightValue": "",
+              "operator": {
+                "type": "any",
+                "operation": "exists"
+              }
             },
             {
-              "id": "9f449a95-1519-4634-b183-242fc064d6de",
-              "name": "teste",
-              "value": "Rio de Janeiro, BR",
-              "type": "string"
+              "id": "condition-name",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "id": "if-validate-5",
+      "name": "IF - Validate Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
-        528,
-        0
-      ],
-      "id": "5dc8b693-315d-4e06-9744-a0fe03464f02",
-      "name": "pega a msg"
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
-        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
-        "text": "={{ $json['mensagem erro'] }}",
-        "additionalFields": {
-          "appendAttribution": false
-        }
+        "jsCode": "// Monta a mensagem de sucesso com temperatura arredondada\nconst itemsOut = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  const cityName = data.name || 'Cidade';\n  const temp = data.main && data.main.temp !== undefined ? data.main.temp : null;\n  const description = data.weather && data.weather[0] ? data.weather[0].description : '';\n  const feelsLike = data.main && data.main.feels_like !== undefined ? data.main.feels_like : null;\n  \n  let message;\n  \n  if (temp !== null) {\n    // Arredonda a temperatura usando Math.round para precisão\n    const tempRounded = Math.round(temp);\n    const feelsLikeRounded = feelsLike !== null ? Math.round(feelsLike) : null;\n    \n    // Monta mensagem conforme requisito\n    message = `🌤️ A temperatura em ${cityName} é de ${tempRounded}°C.`;\n    \n    // Adiciona informações extras (sensação térmica e descrição)\n    if (description) {\n      message += `\\n☁️ Condição: ${description.charAt(0).toUpperCase() + description.slice(1)}.`;\n    }\n    if (feelsLikeRounded !== null && feelsLikeRounded !== tempRounded) {\n      message += `\\n🌡️ Sensação térmica: ${feelsLikeRounded}°C.`;\n    }\n  } else {\n    message = '❌ Não foi possível obter a temperatura no momento.';\n  }\n  \n  item.json.message = message;\n  item.json.ok = true;\n  \n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
       },
+      "id": "function-build-message-6",
+      "name": "Build Success Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-send-success-7",
+      "name": "Telegram Send - Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1312,
-        128
+        1560,
+        200
       ],
-      "id": "c50a2118-5b85-4f78-b74e-ef2cd6ae1f84",
-      "name": "Send a text message1",
-      "webhookId": "42f197d3-f7e7-48ca-b723-018c9f996664",
       "credentials": {
         "telegramApi": {
-          "id": "UznPjR9oaj3Hbdzh",
-          "name": "bot clima"
+          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).",
+        "additionalFields": {}
+      },
+      "id": "telegram-send-error-8",
+      "name": "Telegram Send - Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
+          "name": "Telegram Bot API"
         }
       }
     }
   ],
-  "pinData": {
-    "Telegram Trigger": [
-      {
-        "json": {
-          "update_id": 604886151,
-          "message": {
-            "message_id": 26,
-            "from": {
-              "id": 2002400020,
-              "is_bot": false,
-              "first_name": "Caio",
-              "last_name": "Moura",
-              "language_code": "pt-br"
-            },
-            "chat": {
-              "id": 2002400020,
-              "first_name": "Caio",
-              "last_name": "Moura",
-              "type": "private"
-            },
-            "date": 1771468809,
-            "text": "Maceió, BR"
-          }
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
     "Telegram Trigger": {
       "main": [
         [
           {
-            "node": "pega a msg",
+            "node": "Set Initial Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request": {
+    "Set Initial Data": {
       "main": [
         [
           {
-            "node": "Edit Fields2",
+            "node": "Normalize and Create Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Create Queue": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - OpenWeather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - OpenWeather": {
+      "main": [
+        [
+          {
+            "node": "IF - Validate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Validate Response": {
+      "main": [
+        [
+          {
+            "node": "Build Success Message",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Edit Fields3",
+            "node": "Telegram Send - Error",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields2": {
+    "Build Success Message": {
       "main": [
         [
           {
-            "node": "Send a text message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "pega a msg": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields3": {
-      "main": [
-        [
-          {
-            "node": "Send a text message1",
+            "node": "Telegram Send - Success",
             "type": "main",
             "index": 0
           }
@@ -298,15 +295,14 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "dc05eba2-aae0-4587-8efd-eddfe944bd60",
+  "versionId": "auto-generated",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "962971ad1805fa24b8e86cc2bfcb0c6b100c7e1415956c9aab0fece1952348a2"
+    "instanceId": "auto-generated"
   },
-  "id": "pG0SoJeAvFctpoZr",
+  "id": "auto-generated",
   "tags": []
 }
