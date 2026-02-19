@@ -1,0 +1,312 @@
+{
+  "name": "Bot de Clima - DrC410",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "ead9ee63-3a43-41aa-abbe-25248244c182",
+      "name": "Telegram Trigger",
+      "webhookId": "b0bfbd23-774f-4d2c-8d18-a770ad839c9f",
+      "credentials": {
+        "telegramApi": {
+          "id": "UznPjR9oaj3Hbdzh",
+          "name": "bot clima"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openweathermap.org/data/2.5/weather?q={{ $json.queue }}&appid={{ $json.appid }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openWeatherMapApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "queue",
+              "value": "={{ $json.queue }}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "lang",
+              "value": "pt_br"
+            },
+            {
+              "name": "appid",
+              "value": "e9e582583090e7088a9824e60bfdc3f7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        736,
+        0
+      ],
+      "id": "66eb156e-95f3-4118-b9ce-bd7165ddc6e0",
+      "name": "HTTP Request",
+      "credentials": {
+        "openWeatherMapApi": {
+          "id": "AmvMsiXobH5t2nyu",
+          "name": "OpenWeatherMap account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "43d43f45-30ab-43d7-acbe-c4a45dd54a67",
+              "name": "mensagem formatada",
+              "value": "=🌤️ A temperatura em {{ $json.name }} é de {{ Math.floor($json.main.temp) }}°C.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        -96
+      ],
+      "id": "31b310bb-3980-4e7c-8760-a540dcaf3fb0",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "84f50cd0-265a-424b-bdd1-b64ae2d675a5",
+              "name": "mensagem erro",
+              "value": "=❌ Cidade não encontrada. Use o formato Cidade, UF do País (ex.: São Paulo,BR).",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        128
+      ],
+      "id": "cd03862c-4d68-4ef6-94db-621bc66022b8",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json['mensagem formatada'] }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        -96
+      ],
+      "id": "2bccc6a9-c684-4b76-ba4e-99ab61046cd2",
+      "name": "Send a text message",
+      "webhookId": "566ac0c2-3388-496f-b0dd-abab60414f4a",
+      "credentials": {
+        "telegramApi": {
+          "id": "UznPjR9oaj3Hbdzh",
+          "name": "bot clima"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15aba94c-96fd-4edb-8af3-2f40060fbdf1",
+              "name": "queue",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "b80d6579-bf70-48e8-9755-addcb167d08f",
+              "name": "expressao_tratada",
+              "value": "={{ $json.message.text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, \"\").replace(/ /g, \"%\") }}",
+              "type": "string"
+            },
+            {
+              "id": "26fbac3d-8d0e-4e16-8eb9-1f034b6b895d",
+              "name": "appid",
+              "value": "e9e582583090e7088a9824e60bfdc3f7",
+              "type": "string"
+            },
+            {
+              "id": "9f449a95-1519-4634-b183-242fc064d6de",
+              "name": "teste",
+              "value": "Rio de Janeiro, BR",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        0
+      ],
+      "id": "5dc8b693-315d-4e06-9744-a0fe03464f02",
+      "name": "pega a msg"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json['mensagem erro'] }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        128
+      ],
+      "id": "c50a2118-5b85-4f78-b74e-ef2cd6ae1f84",
+      "name": "Send a text message1",
+      "webhookId": "42f197d3-f7e7-48ca-b723-018c9f996664",
+      "credentials": {
+        "telegramApi": {
+          "id": "UznPjR9oaj3Hbdzh",
+          "name": "bot clima"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 604886151,
+          "message": {
+            "message_id": 26,
+            "from": {
+              "id": 2002400020,
+              "is_bot": false,
+              "first_name": "Caio",
+              "last_name": "Moura",
+              "language_code": "pt-br"
+            },
+            "chat": {
+              "id": 2002400020,
+              "first_name": "Caio",
+              "last_name": "Moura",
+              "type": "private"
+            },
+            "date": 1771468809,
+            "text": "Maceió, BR"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "pega a msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pega a msg": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dc05eba2-aae0-4587-8efd-eddfe944bd60",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "962971ad1805fa24b8e86cc2bfcb0c6b100c7e1415956c9aab0fece1952348a2"
+  },
+  "id": "pG0SoJeAvFctpoZr",
+  "tags": []
+}
