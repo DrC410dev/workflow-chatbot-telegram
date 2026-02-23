@@ -16,12 +16,6 @@
         300
       ],
       "webhookId": "auto-generated",
-      "credentials": {
-        "telegramApi": {
-          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
-          "name": "Telegram Bot API"
-        }
-      }
     },
     {
       "parameters": {
@@ -82,7 +76,7 @@
             },
             {
               "name": "appid",
-              "value": "={{ $credentials.openWeatherMapApi.apiKey }}"
+              "value": "={{ $openWeatherMapApi.apiKey }}"
             }
           ]
         },
@@ -97,12 +91,6 @@
         300
       ],
       "continueOnFail": true,
-      "credentials": {
-        "openWeatherMapApi": {
-          "id": "{{OPENWEATHER_CREDENTIAL_ID}}",
-          "name": "OpenWeather API"
-        }
-      }
     },
     {
       "parameters": {
@@ -190,12 +178,6 @@
         1560,
         200
       ],
-      "credentials": {
-        "telegramApi": {
-          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
-          "name": "Telegram Bot API"
-        }
-      }
     },
     {
       "parameters": {
@@ -211,12 +193,6 @@
         1340,
         400
       ],
-      "credentials": {
-        "telegramApi": {
-          "id": "{{TELEGRAM_CREDENTIAL_ID}}",
-          "name": "Telegram Bot API"
-        }
-      }
     }
   ],
   "pinData": {},
