@@ -5,29 +5,31 @@
       "parameters": {
         "updates": [
           "message"
-        ]
+        ],
+        "additionalFields": {}
       },
       "id": "telegram-trigger-1",
       "name": "Telegram Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        240,
-        300
-      ],
+      "typeVersion": 1.2,
+      "position": [240, 300],
       "webhookId": "auto-generated",
     },
     {
       "parameters": {
-        "values": {
-          "string": [
+        "assignments": {
+          "assignments": [
             {
+              "id": "assign-chat-id",
               "name": "chat_id",
-              "value": "={{ $json.message.chat.id }}"
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
             },
             {
+              "id": "assign-queue-raw",
               "name": "queue_raw",
-              "value": "={{ $json.message.text.trim() }}"
+              "value": "={{ $json.message.text.trim() }}",
+              "type": "string"
             }
           ]
         },
@@ -36,29 +38,24 @@
       "id": "set-initial-2",
       "name": "Set Initial Data",
       "type": "n8n-nodes-base.set",
-      "typeVersion": 3.3,
-      "position": [
-        460,
-        300
-      ]
+      "typeVersion": 3.4,
+      "position": [460, 300]
     },
     {
       "parameters": {
-        "jsCode": "// Normaliza a entrada do usuário e cria o campo 'queue'\nconst itemsOut = [];\n\nfor (const item of items) {\n  let text = item.json.queue_raw || '';\n\n  // Remove espaços nas extremidades\n  text = text.trim();\n\n  // Normaliza acentuação (remove acentos)\n  text = text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n  // Converte para minúsculas\n  text = text.toLowerCase();\n\n  // Remove espaços duplicados\n  text = text.replace(/\\s+/g, ' ');\n\n  // Remove espaços antes/depois da vírgula\n  text = text.replace(/\\s*,\\s*/g, ',');\n\n  // Codifica para URL (evita problemas com caracteres especiais)\n  text = encodeURIComponent(text);\n  text = decodeURIComponent(text); // Normaliza encoding\n\n  // Separa cidade e UF (se fornecido)\n  const parts = text.split(',');\n  const cidade = parts[0] || '';\n  const uf = parts[1] ? parts[1].trim() : '';\n\n  // Monta o parâmetro 'queue' no formato esperado pela OpenWeather\n  // Formato: \"cidade,BR\" ou apenas \"cidade\"\n  const queue = cidade ? `${cidade},BR` : '';\n\n  item.json.queue = queue;\n  item.json.cidade_input = cidade;\n  item.json.uf_input = uf;\n\n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
+        "jsCode": "// Normaliza a entrada do usuário e cria o campo 'queue'\nconst itemsOut = [];\n\nfor (const item of items) {\n  let text = item.json.queue_raw || '';\n\n  // Remove espaços nas extremidades\n  text = text.trim();\n\n  // Normaliza acentuação (remove acentos)\n  text = text.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n  // Converte para minúsculas\n  text = text.toLowerCase();\n\n  // Remove espaços duplicados\n  text = text.replace(/\\s+/g, ' ');\n\n  // Remove espaços antes/depois da vírgula\n  text = text.replace(/\\s*,\\s*/g, ',');\n\n  // Separa cidade e UF (se fornecido)\n  const parts = text.split(',');\n  const cidade = parts[0] ? parts[0].trim() : '';\n  const uf = parts[1] ? parts[1].trim() : '';\n\n  // Monta o parâmetro 'queue' no formato esperado pela OpenWeather\n  // Sempre inclui ',BR' para reduzir ambiguidades\n  const queue = cidade ? `${cidade},BR` : '';\n\n  item.json.queue = queue;\n  item.json.cidade_input = cidade;\n  item.json.uf_input = uf;\n\n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
       },
       "id": "function-normalize-3",
       "name": "Normalize and Create Queue",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        680,
-        300
-      ]
+      "position": [680, 300]
     },
     {
       "parameters": {
         "method": "GET",
         "url": "https://api.openweathermap.org/data/2.5/weather",
+        "nodeCredentialType": "openWeatherMapApi",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -73,10 +70,6 @@
             {
               "name": "lang",
               "value": "pt_br"
-            },
-            {
-              "name": "appid",
-              "value": "={{ $openWeatherMapApi.apiKey }}"
             }
           ]
         },
@@ -85,19 +78,25 @@
       "id": "http-openweather-4",
       "name": "HTTP Request - OpenWeather",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        900,
-        300
-      ],
-      "continueOnFail": true,
+      "typeVersion": 4.3,
+      "position": [900, 300],
+      "onError": "continueErrorOutput",
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verifica se o erro veio de falha de conexão ou resposta inválida\nconst itemsOut = [];\n\nfor (const item of items) {\n  const errorMessage = item.json.error?.message || '';\n  const statusCode = item.json.statusCode || 0;\n\n  let tipoErro = 'conexao';\n\n  // Se o status for 404, a cidade não foi encontrada\n  if (statusCode === 404 || errorMessage.includes('city not found')) {\n    tipoErro = 'cidade_nao_encontrada';\n  }\n\n  item.json.tipo_erro = tipoErro;\n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
+      },
+      "id": "function-classify-error",
+      "name": "Classify Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 460]
     },
     {
       "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
-            "leftValue": "",
             "typeValidation": "strict"
           },
           "conditions": [
@@ -146,128 +145,129 @@
       "name": "IF - Validate Response",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        1120,
-        300
-      ]
+      "position": [1120, 300]
     },
     {
       "parameters": {
-        "jsCode": "// Monta a mensagem de sucesso com temperatura arredondada\nconst itemsOut = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  const cityName = data.name || 'Cidade';\n  const temp = data.main && data.main.temp !== undefined ? data.main.temp : null;\n  const description = data.weather && data.weather[0] ? data.weather[0].description : '';\n  const feelsLike = data.main && data.main.feels_like !== undefined ? data.main.feels_like : null;\n  \n  let message;\n  \n  if (temp !== null) {\n    // Arredonda a temperatura usando Math.round para precisão\n    const tempRounded = Math.round(temp);\n    const feelsLikeRounded = feelsLike !== null ? Math.round(feelsLike) : null;\n    \n    // Monta mensagem conforme requisito\n    message = `🌤️ A temperatura em ${cityName} é de ${tempRounded}°C.`;\n    \n    // Adiciona informações extras (sensação térmica e descrição)\n    if (description) {\n      message += `\\n☁️ Condição: ${description.charAt(0).toUpperCase() + description.slice(1)}.`;\n    }\n    if (feelsLikeRounded !== null && feelsLikeRounded !== tempRounded) {\n      message += `\\n🌡️ Sensação térmica: ${feelsLikeRounded}°C.`;\n    }\n  } else {\n    message = '❌ Não foi possível obter a temperatura no momento.';\n  }\n  \n  item.json.message = message;\n  item.json.ok = true;\n  \n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
+        "jsCode": "// Monta a mensagem de sucesso com temperatura arredondada\nconst itemsOut = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  const cityName = data.name || 'Cidade';\n  const temp = data.main && data.main.temp !== undefined ? data.main.temp : null;\n  const description = data.weather && data.weather[0] ? data.weather[0].description : '';\n  const feelsLike = data.main && data.main.feels_like !== undefined ? data.main.feels_like : null;\n\n  let message;\n\n  if (temp !== null) {\n    // Arredonda usando Math.round para precisão\n    const tempRounded = Math.round(temp);\n    const feelsLikeRounded = feelsLike !== null ? Math.round(feelsLike) : null;\n\n    message = `🌤️ A temperatura em ${cityName} é de ${tempRounded}°C.`;\n\n    if (description) {\n      message += `\\n☁️ Condição: ${description.charAt(0).toUpperCase() + description.slice(1)}.`;\n    }\n\n    if (feelsLikeRounded !== null) {\n      message += `\\n🌡️ Sensação térmica: ${feelsLikeRounded}°C.`;\n    }\n  } else {\n    message = '❌ Não foi possível obter a temperatura no momento. Tente novamente em instantes.';\n  }\n\n  item.json.message = message;\n  item.json.ok = true;\n\n  itemsOut.push(item);\n}\n\nreturn itemsOut;"
       },
       "id": "function-build-message-6",
       "name": "Build Success Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1340,
-        200
-      ]
+      "position": [1340, 160]
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
+        "chatId": "={{ $('Set Initial Data').item.json.chat_id }}",
         "text": "={{ $json.message }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "id": "telegram-send-success-7",
       "name": "Telegram Send - Success",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [
-        1560,
-        200
-      ],
+      "position": [1560, 160],
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF (ex.: São Paulo,SP).",
-        "additionalFields": {}
+        "conditions": {
+          "conditions": [
+            {
+              "id": "check-tipo-erro",
+              "leftValue": "={{ $json.tipo_erro }}",
+              "rightValue": "cidade_nao_encontrada",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "telegram-send-error-8",
-      "name": "Telegram Send - Error",
+      "id": "if-error-type",
+      "name": "IF - Error Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 460]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Set Initial Data').item.json.chat_id }}",
+        "text": "❌ Cidade não encontrada.\n\nUse o formato: Cidade,UF,País (ex.: São Paulo,SP,BR).\nInclua a sigla do país ao final para evitar ambiguidades.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "telegram-send-error-city",
+      "name": "Telegram Send - City Not Found",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [
-        1340,
-        400
-      ],
+      "position": [1560, 360],
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Set Initial Data').item.json.chat_id }}",
+        "text": "⚠️ Não foi possível conectar ao serviço de clima no momento.\n\nPor favor, tente novamente em alguns instantes.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "telegram-send-error-connection",
+      "name": "Telegram Send - Connection Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1560, 560],
     }
   ],
   "pinData": {},
   "connections": {
     "Telegram Trigger": {
       "main": [
-        [
-          {
-            "node": "Set Initial Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Set Initial Data", "type": "main", "index": 0 }]
       ]
     },
     "Set Initial Data": {
       "main": [
-        [
-          {
-            "node": "Normalize and Create Queue",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Normalize and Create Queue", "type": "main", "index": 0 }]
       ]
     },
     "Normalize and Create Queue": {
       "main": [
-        [
-          {
-            "node": "HTTP Request - OpenWeather",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "HTTP Request - OpenWeather", "type": "main", "index": 0 }]
       ]
     },
     "HTTP Request - OpenWeather": {
       "main": [
-        [
-          {
-            "node": "IF - Validate Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "IF - Validate Response", "type": "main", "index": 0 }]
+      ],
+      "error": [
+        [{ "node": "Classify Error", "type": "main", "index": 0 }]
       ]
     },
     "IF - Validate Response": {
       "main": [
-        [
-          {
-            "node": "Build Success Message",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Telegram Send - Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Build Success Message", "type": "main", "index": 0 }],
+        [{ "node": "Classify Error", "type": "main", "index": 0 }]
       ]
     },
     "Build Success Message": {
       "main": [
-        [
-          {
-            "node": "Telegram Send - Success",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Telegram Send - Success", "type": "main", "index": 0 }]
+      ]
+    },
+    "Classify Error": {
+      "main": [
+        [{ "node": "IF - Error Type", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF - Error Type": {
+      "main": [
+        [{ "node": "Telegram Send - City Not Found", "type": "main", "index": 0 }],
+        [{ "node": "Telegram Send - Connection Error", "type": "main", "index": 0 }]
       ]
     }
   },
